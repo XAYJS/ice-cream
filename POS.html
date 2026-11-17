@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>POS API Tester — Categories, Products & Inventory</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-6 font-sans">
+
+  <div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header & API Base URL -->
+    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-bold text-emerald-400">🍦 POS Backend API Tester</h1>
+        <p class="text-xs text-slate-400">ທົດສອບ Categories, Products & Inventory ໂດຍກົງກັບ Express + MySQL</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-slate-400">API URL:</label>
+        <input id="apiUrl" type="text" value="http://localhost:3000/api/v1"
+          class="bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-emerald-300 w-64 focus:outline-none focus:border-emerald-500" />
+        <button onclick="loadAll()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition">
+          🔄 โหลดข้อมูลทั้งหมด
+        </button>
+      </div>
+    </div>
+
+    <!-- Response Console -->
+    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800">
+      <div class="flex justify-between items-center mb-1">
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">API Response Log</span>
+        <span id="statusBadge" class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">Ready</span>
+      </div>
+      <pre id="consoleOutput" class="text-xs text-amber-300 overflow-x-auto max-h-32">ກົດປຸ່ມເພື່ອເລີ່ມທົດສອບ API...</pre>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex gap-2 border-b border-slate-700 pb-2">
+      <button onclick="switchTab('categories')" id="tab-categories" class="tab-btn bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium">1. Categories (ໝວດໝູ່)</button>
+      <button onclick="switchTab('products')" id="tab-products" class="tab-btn bg-slate-800 text-slate-300 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-medium">2. Products (ສິນຄ້າ/ວັດຖຸດິບ)</button>
+      <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn bg-slate-800 text-slate-300 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-medium">3. Inventory (ສະຕັອກ & ແຈ້ງເຕືອນ)</button>
+    </div>
+
+    <!-- ==================== 1. CATEGORIES TAB ==================== -->
+    <div id="panel-categories" class="tab-panel grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Form Create / Update Category -->
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4 h-fit">
+        <h2 id="catFormTitle" class="font-bold text-lg text-emerald-400">➕ ເພີ່ມໝວດໝູ່ໃໝ່ (POST)</h2>
+        <input type="hidden" id="catId" />
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">ຊື່ໝວດໝູ່ (name) *</label>
+          <input id="catName" type="text" placeholder="ເຊັ່ນ: ກະແລ້ມ, ເຄື່ອງດື່ມ, ວັດຖຸດິບ"
+            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">ລາຍລະອຽດ (description)</label>
+          <textarea id="catDesc" rows="2" placeholder="ລາຍລະອຽດເພີ່ມເຕີມ..."
+            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm"></textarea>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="saveCategory()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg text-sm font-medium">ບັນທຶກ</button>
+          <button onclick="resetCategoryForm()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-sm">ຍົກເລີກ</button>
+        </div>
+      </div>
+
+      <!-- Table Categories -->
+      <div class="md:col-span-2 bg-slate-800 p-5 rounded-xl border border-slate-700">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="font-bold text-lg">ລາຍຊື່ໝວດໝູ່ທັງໝົດ (GET /categories)</h2>
+          <button onclick="fetchCategories()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Refresh</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="text-xs text-slate-400 uppercase bg-slate-900">
+              <tr>
+                <th class="px-4 py-2">ID</th>
+                <th class="px-4 py-2">ຊື່ໝວດໝູ່</th>
+                <th class="px-4 py-2">ລາຍລະອຽດ</th>
+                <th class="px-4 py-2 text-right">ຈັດການ</th>
+              </tr>
+            </thead>
+            <tbody id="categoriesTableBody" class="divide-y divide-slate-700"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 2. PRODUCTS TAB ==================== -->
+    <div id="panel-products" class="tab-panel hidden grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Form Create / Update Product -->
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-3 h-fit">
+        <h2 id="prodFormTitle" class="font-bold text-lg text-emerald-400">➕ ເພີ່ມສິນຄ້າ / ວັດຖຸດິບ (POST)</h2>
+        <input type="hidden" id="prodId" />
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">ຊື່ສິນຄ້າ (name) *</label>
+          <input id="prodName" type="text" placeholder="ເຊັ່ນ: Ice Cream Vanilla"
+            class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ໝວດໝູ່ (category_id)</label>
+            <select id="prodCategory" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm">
+              <option value="">-- ເລືອກໝວດໝູ່ --</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ປະເພດ (type)</label>
+            <select id="prodType" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm">
+              <option value="product">product (ສິນຄ້າຂາຍ)</option>
+              <option value="raw_material">raw_material (ວັດຖຸດິບ)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ລາຄາຂາຍ (price)</label>
+            <input id="prodPrice" type="number" step="0.01" value="0"
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ຕົ້ນທຶນ (cost)</label>
+            <input id="prodCost" type="number" step="0.01" value="0"
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ສະຕັອກເລີ່ມຕົ້ນ (stock)</label>
+            <input id="prodStock" type="number" value="0"
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ໜ່ວຍນັບ (unit)</label>
+            <input id="prodUnit" type="text" value="ຊິ້ນ" placeholder="ຈອກ, ກ່ອງ, ກິໂລ"
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm" />
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="saveProduct()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded-lg text-sm font-medium">ບັນທຶກ</button>
+          <button onclick="resetProductForm()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-lg text-sm">ຍົກເລີກ</button>
+        </div>
+      </div>
+
+      <!-- Table Products -->
+      <div class="md:col-span-2 bg-slate-800 p-5 rounded-xl border border-slate-700">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="font-bold text-lg">ລາຍການສິນຄ້າ & ວັດຖຸດິບ (GET /products)</h2>
+          <button onclick="fetchProducts()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Refresh</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="text-xs text-slate-400 uppercase bg-slate-900">
+              <tr>
+                <th class="px-3 py-2">ID</th>
+                <th class="px-3 py-2">ຊື່ສິນຄ້າ</th>
+                <th class="px-3 py-2">ໝວດໝູ່</th>
+                <th class="px-3 py-2">ປະເພດ</th>
+                <th class="px-3 py-2">ລາຄາ / ທຶນ</th>
+                <th class="px-3 py-2">ສະຕັອກ</th>
+                <th class="px-3 py-2 text-right">ຈັດການ</th>
+              </tr>
+            </thead>
+            <tbody id="productsTableBody" class="divide-y divide-slate-700"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 3. INVENTORY TAB ==================== -->
+    <div id="panel-inventory" class="tab-panel hidden space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Restock Form -->
+        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-3">
+          <h2 class="font-bold text-base text-sky-400">📦 ຮັບເຄື່ອງເຂົ້າສາງ (POST /inventory/restock)</h2>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ເລືອກສິນຄ້າ / ວັດຖຸດິບ</label>
+            <select id="restockProductId" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm"></select>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">ຈຳນວນທີ່ຮັບເຂົ້າ (+)</label>
+              <input id="restockQty" type="number" min="1" value="10"
+                class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">ຕົ້ນທຶນໃໝ່ (ຖ້າມີ)</label>
+              <input id="restockCost" type="number" step="0.01" placeholder="ບໍ່ບັງຄັບ"
+                class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm" />
+            </div>
+          </div>
+          <button onclick="submitRestock()" class="w-full bg-sky-600 hover:bg-sky-500 text-white py-2 rounded-lg text-sm font-medium">ຢືນຢັນຮັບເຂົ້າສາງ</button>
+        </div>
+
+        <!-- Manual Adjust Form -->
+        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-3">
+          <h2 class="font-bold text-base text-amber-400">⚖️ ປັບປຸງສະຕັອກ Manual (POST /inventory/adjust)</h2>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ເລືອກສິນຄ້າ / ວັດຖຸດິບ</label>
+            <select id="adjustProductId" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm"></select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">ຈຳນວນຄົງເຫຼືອຕົວຈິງຫຼັງກວດນັບ (newStock)</label>
+            <input id="adjustNewStock" type="number" min="0" value="0"
+              class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-1.5 text-sm" />
+          </div>
+          <button onclick="submitAdjust()" class="w-full bg-amber-600 hover:bg-amber-500 text-white py-2 rounded-lg text-sm font-medium">ອັບເດດຍອດຄົງເຫຼືອຈິງ</button>
+        </div>
+
+        <!-- Alerts Box -->
+        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-3">
+          <div class="flex justify-between items-center">
+            <h2 class="font-bold text-base text-rose-400">🚨 ລະບົບແຈ້ງເຕືອນ (Alerts)</h2>
+            <button onclick="fetchAlerts()" class="text-xs bg-slate-700 hover:bg-slate-600 px-2.5 py-1 rounded">Check Alerts</button>
+          </div>
+          <div class="space-y-2 text-xs">
+            <div class="bg-slate-900 p-2.5 rounded-lg border border-rose-900/50">
+              <p class="font-semibold text-rose-400 mb-1">⚠️ ສິນຄ້າໃກ້ໝົດ (Low Stock):</p>
+              <ul id="lowStockList" class="list-disc list-inside text-slate-300 space-y-0.5">
+                <li>ກຳລັງໂຫຼດ...</li>
+              </ul>
+            </div>
+            <div class="bg-slate-900 p-2.5 rounded-lg border border-orange-900/50">
+              <p class="font-semibold text-orange-400 mb-1">⏳ ໃກ້ໝົດອາຍຸ (Expiry within 7 days):</p>
+              <ul id="expiryList" class="list-disc list-inside text-slate-300 space-y-0.5">
+                <li>ກຳລັງໂຫຼດ...</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventory Summary Table -->
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="font-bold text-lg">ລາຍງານສະຫຼຸບສະຕັອກພາຍໃນສາງ (GET /inventory)</h2>
+          <button onclick="fetchInventory()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg">Refresh</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="text-xs text-slate-400 uppercase bg-slate-900">
+              <tr>
+                <th class="px-4 py-2">ID</th>
+                <th class="px-4 py-2">ລາຍການ</th>
+                <th class="px-4 py-2">ປະເພດ</th>
+                <th class="px-4 py-2">ຄົງເຫຼືອ</th>
+                <th class="px-4 py-2">ຂັ້ນຕ່ຳ (Min)</th>
+                <th class="px-4 py-2">ຕົ້ນທຶນ/ໜ່ວຍ</th>
+                <th class="px-4 py-2">ມູນຄ່າລວມໃນສາງ</th>
+                <th class="px-4 py-2">ວັນໝົດອາຍຸ</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody" class="divide-y divide-slate-700"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const getBaseUrl = () => document.getElementById('apiUrl').value.replace(/\/$/, '');
+
+    function logResponse(endpoint, status, data) {
+      const badge = document.getElementById('statusBadge');
+      badge.textContent = `${endpoint} → ${status}`;
+      badge.className = status >= 200 && status < 300
+        ? 'text-xs px-2 py-0.5 rounded bg-emerald-900 text-emerald-300'
+        : 'text-xs px-2 py-0.5 rounded bg-rose-900 text-rose-300';
+      document.getElementById('consoleOutput').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function apiRequest(path, method = 'GET', body = null) {
+      const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' }
+      };
+      if (body) options.body = JSON.stringify(body);
+      try {
+        const res = await fetch(`${getBaseUrl()}${path}`, options);
+        const data = await res.json();
+        logResponse(`${method} ${path}`, res.status, data);
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+        return data;
+      } catch (err) {
+        logResponse(`${method} ${path}`, 'ERR', { error: err.message });
+        throw err;
+      }
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-panel').forEach(p => {
+        p.classList.add('hidden');
+        p.classList.remove('grid');
+      });
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.className = 'tab-btn bg-slate-800 text-slate-300 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-medium';
+      });
+      const activePanel = document.getElementById(`panel-${tabName}`);
+      activePanel.classList.remove('hidden');
+      if (tabName !== 'inventory') activePanel.classList.add('grid');
+      document.getElementById(`tab-${tabName}`).className = 'tab-btn bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium';
+    }
+
+    // ==================== CATEGORIES ====================
+    async function fetchCategories() {
+      const data = await apiRequest('/categories');
+      const tbody = document.getElementById('categoriesTableBody');
+      const select = document.getElementById('prodCategory');
+      tbody.innerHTML = '';
+      select.innerHTML = '<option value="">-- ເລືອກໝວດໝູ່ --</option>';
+
+      data.forEach(c => {
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-750">
+            <td class="px-4 py-2 font-mono text-slate-400">${c.id}</td>
+            <td class="px-4 py-2 font-medium text-white">${c.name}</td>
+            <td class="px-4 py-2 text-slate-400">${c.description || '-'}</td>
+            <td class="px-4 py-2 text-right space-x-1">
+              <button onclick='editCategoryForm(${JSON.stringify(c)})' class="bg-amber-600/20 text-amber-300 hover:bg-amber-600/40 px-2.5 py-1 rounded text-xs">ແກ້ໄຂ</button>
+              <button onclick="deleteCategory(${c.id})" class="bg-rose-600/20 text-rose-300 hover:bg-rose-600/40 px-2.5 py-1 rounded text-xs">ລົບ</button>
+            </td>
+          </tr>`;
+        select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+      });
+    }
+
+    function editCategoryForm(cat) {
+      document.getElementById('catFormTitle').textContent = `✏️ ແກ້ໄຂໝວດໝູ່ #${cat.id} (PUT)`;
+      document.getElementById('catId').value = cat.id;
+      document.getElementById('catName').value = cat.name;
+      document.getElementById('catDesc').value = cat.description || '';
+    }
+
+    function resetCategoryForm() {
+      document.getElementById('catFormTitle').textContent = '➕ ເພີ່ມໝວດໝູ່ໃໝ່ (POST)';
+      document.getElementById('catId').value = '';
+      document.getElementById('catName').value = '';
+      document.getElementById('catDesc').value = '';
+    }
+
+    async function saveCategory() {
+      const id = document.getElementById('catId').value;
+      const payload = {
+        name: document.getElementById('catName').value,
+        description: document.getElementById('catDesc').value
+      };
+      if (id) {
+        await apiRequest(`/categories/${id}`, 'PUT', payload);
+      } else {
+        await apiRequest('/categories', 'POST', payload);
+      }
+      resetCategoryForm();
+      fetchCategories();
+    }
+
+    async function deleteCategory(id) {
+      if (!confirm('ຢືນຢັນການລົບໝວດໝູ່ນີ້?')) return;
+      await apiRequest(`/categories/${id}`, 'DELETE');
+      fetchCategories();
+    }
+
+    // ==================== PRODUCTS ====================
+    async function fetchProducts() {
+      const data = await apiRequest('/products');
+      const tbody = document.getElementById('productsTableBody');
+      const restockSel = document.getElementById('restockProductId');
+      const adjustSel = document.getElementById('adjustProductId');
+      tbody.innerHTML = '';
+      restockSel.innerHTML = '';
+      adjustSel.innerHTML = '';
+
+      data.forEach(p => {
+        const typeBadge = p.type === 'raw_material'
+          ? '<span class="bg-purple-900/60 text-purple-300 px-2 py-0.5 rounded text-xs">ວັດຖຸດິບ</span>'
+          : '<span class="bg-emerald-900/60 text-emerald-300 px-2 py-0.5 rounded text-xs">ສິນຄ້າຂາຍ</span>';
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-750">
+            <td class="px-3 py-2 font-mono text-slate-400">${p.id}</td>
+            <td class="px-3 py-2 font-medium text-white">${p.name}</td>
+            <td class="px-3 py-2 text-slate-300">${p.category_name || '-'}</td>
+            <td class="px-3 py-2">${typeBadge}</td>
+            <td class="px-3 py-2 text-slate-300">${p.price} / <span class="text-slate-400">${p.cost}</span></td>
+            <td class="px-3 py-2 font-semibold text-emerald-400">${p.stock} ${p.unit || ''}</td>
+            <td class="px-3 py-2 text-right space-x-1">
+              <button onclick='editProductForm(${JSON.stringify(p)})' class="bg-amber-600/20 text-amber-300 hover:bg-amber-600/40 px-2 py-1 rounded text-xs">ແກ້ໄຂ</button>
+              <button onclick="deleteProduct(${p.id})" class="bg-rose-600/20 text-rose-300 hover:bg-rose-600/40 px-2 py-1 rounded text-xs">ລົບ</button>
+            </td>
+          </tr>`;
+
+        const opt = `<option value="${p.id}">[#${p.id}] ${p.name} (ຄົງເຫຼືອ: ${p.stock} ${p.unit || ''})</option>`;
+        restockSel.innerHTML += opt;
+        adjustSel.innerHTML += opt;
+      });
+    }
+
+    function editProductForm(p) {
+      document.getElementById('prodFormTitle').textContent = `✏️ ແກ້ໄຂສິນຄ້າ #${p.id} (PUT)`;
+      document.getElementById('prodId').value = p.id;
+      document.getElementById('prodName').value = p.name;
+      document.getElementById('prodCategory').value = p.category_id || '';
+      document.getElementById('prodType').value = p.type || 'product';
+      document.getElementById('prodPrice').value = p.price;
+      document.getElementById('prodCost').value = p.cost;
+      document.getElementById('prodStock').value = p.stock;
+      document.getElementById('prodUnit').value = p.unit || 'ຊິ້ນ';
+    }
+
+    function resetProductForm() {
+      document.getElementById('prodFormTitle').textContent = '➕ ເພີ່ມສິນຄ້າ / ວັດຖຸດິບ (POST)';
+      document.getElementById('prodId').value = '';
+      document.getElementById('prodName').value = '';
+      document.getElementById('prodCategory').value = '';
+      document.getElementById('prodType').value = 'product';
+      document.getElementById('prodPrice').value = 0;
+      document.getElementById('prodCost').value = 0;
+      document.getElementById('prodStock').value = 0;
+      document.getElementById('prodUnit').value = 'ຊິ້ນ';
+    }
+
+    async function saveProduct() {
+      const id = document.getElementById('prodId').value;
+      const catVal = document.getElementById('prodCategory').value;
+      const payload = {
+        name: document.getElementById('prodName').value,
+        category_id: catVal ? Number(catVal) : null,
+        type: document.getElementById('prodType').value,
+        price: Number(document.getElementById('prodPrice').value),
+        cost: Number(document.getElementById('prodCost').value),
+        stock: Number(document.getElementById('prodStock').value),
+        unit: document.getElementById('prodUnit').value
+      };
+      if (id) {
+        await apiRequest(`/products/${id}`, 'PUT', payload);
+      } else {
+        await apiRequest('/products', 'POST', payload);
+      }
+      resetProductForm();
+      await fetchProducts();
+      fetchInventory();
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm('ຢືນຢັນການລົບສິນຄ້ານີ້?')) return;
+      await apiRequest(`/products/${id}`, 'DELETE');
+      await fetchProducts();
+      fetchInventory();
+    }
+
+    // ==================== INVENTORY ====================
+    async function fetchInventory() {
+      const data = await apiRequest('/inventory');
+      const tbody = document.getElementById('inventoryTableBody');
+      tbody.innerHTML = '';
+
+      data.forEach(item => {
+        const isLow = item.stock <= (item.min_stock ?? 10);
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-750">
+            <td class="px-4 py-2 font-mono text-slate-400">${item.id}</td>
+            <td class="px-4 py-2 font-medium text-white">${item.name}</td>
+            <td class="px-4 py-2 text-xs text-slate-400">${item.type}</td>
+            <td class="px-4 py-2 font-bold ${isLow ? 'text-rose-400' : 'text-emerald-400'}">${item.stock} ${item.unit || ''}</td>
+            <td class="px-4 py-2 text-slate-400">${item.min_stock ?? '-'}</td>
+            <td class="px-4 py-2 text-slate-300">${item.cost}</td>
+            <td class="px-4 py-2 text-sky-300 font-medium">${Number(item.total_cost_value || 0).toFixed(2)}</td>
+            <td class="px-4 py-2 text-slate-400 text-xs">${item.expiry_date ? item.expiry_date.split('T')[0] : '-'}</td>
+          </tr>`;
+      });
+    }
+
+    async function submitRestock() {
+      const productId = Number(document.getElementById('restockProductId').value);
+      const quantity = Number(document.getElementById('restockQty').value);
+      const costVal = document.getElementById('restockCost').value;
+      const payload = { productId, quantity };
+      if (costVal !== '') payload.cost = Number(costVal);
+
+      await apiRequest('/inventory/restock', 'POST', payload);
+      await fetchProducts();
+      await fetchInventory();
+      fetchAlerts();
+    }
+
+    async function submitAdjust() {
+      const productId = Number(document.getElementById('adjustProductId').value);
+      const newStock = Number(document.getElementById('adjustNewStock').value);
+
+      await apiRequest('/inventory/adjust', 'POST', { productId, newStock });
+      await fetchProducts();
+      await fetchInventory();
+      fetchAlerts();
+    }
+
+    async function fetchAlerts() {
+      const lowStock = await apiRequest('/inventory/alerts/low-stock');
+      const expiry = await apiRequest('/inventory/alerts/expiry');
+
+      const lowList = document.getElementById('lowStockList');
+      lowList.innerHTML = lowStock.length
+        ? lowStock.map(i => `<li>${i.name} (ເຫຼືອ ${i.stock} / Min ${i.min_stock})</li>`).join('')
+        : '<li class="text-emerald-400">ບໍ່ມີສິນຄ້າໃກ້ໝົດ</li>';
+
+      const expList = document.getElementById('expiryList');
+      expList.innerHTML = expiry.length
+        ? expiry.map(i => `<li>${i.name} (ໝົດອາຍຸ: ${i.expiry_date.split('T')[0]})</li>`).join('')
+        : '<li class="text-emerald-400">ບໍ່ມີສິນຄ້າໃກ້ໝົດອາຍຸ</li>';
+    }
+
+    async function loadAll() {
+      await fetchCategories();
+      await fetchProducts();
+      await fetchInventory();
+      await fetchAlerts();
+    }
+
+    // Auto-load on startup
+    loadAll();
+  </script>
+</body>
+</html>
